@@ -6,15 +6,15 @@ import os
 # Initialize Flask app
 app = Flask(__name__)
 
-@app.route('/')
-def index():
+@app.route('/hello')
+def hello():
     return "Hello, Render!"
-    
+
 # Load YOLOv5 model
 model_path = 'best.pt'  # Replace with your actual model path
 model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
 
-# Initialize webcam
+# Initialize webcamflask ru
 cap = cv2.VideoCapture(0)
 
 # Directories
