@@ -3,84 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smoke and Fire Detection</title>
+    <title>Spotter by Arno</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             background-color: #f4f4f4;
+            text-align: center;
         }
         header {
             background-color: #333;
             color: #fff;
-            padding: 1em 0;
-            text-align: center;
+            padding: 20px 0;
         }
-        main {
-            padding: 2em;
-            max-width: 800px;
-            margin: auto;
-            background: #fff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
+        header h1 {
+            margin: 0;
+            font-size: 2em;
         }
-        section {
-            margin-bottom: 2em;
+        .video-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            margin: 20px;
         }
-        h1, h2 {
-            color: #333;
-        }
-        .live-feed {
+        video, canvas {
             border: 2px solid #ddd;
             border-radius: 10px;
-            overflow: hidden;
         }
-        .upload-form input[type="file"] {
-            margin-bottom: 1em;
+        .controls {
+            margin: 20px;
         }
-        button {
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            padding: 0.5em 1em;
-            cursor: pointer;
-            border-radius: 5px;
+        p {
+            font-size: 18px;
+            margin-top: 20px;
         }
-        button:hover {
-            background-color: #0056b3;
+        .detection {
+            font-weight: bold;
         }
-        footer {
-            text-align: center;
-            margin-top: 2em;
-            color: #666;
+        .fire {
+            color: red;
+        }
+        .smoke {
+            color: orange;
+        }
+        .no-detection {
+            color: green;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>Smoke and Fire Detection Dashboard</h1>
+        <h1>Spotter by Arno</h1>
     </header>
-    <main>
-        <!-- Live Video Feed Section -->
-        <section>
-            <h2>Live Video Feed</h2>
-            <div class="live-feed">
-                <img src="{{ url_for('video_feed') }}" alt="Live Video Feed" style="width: 100%; height: auto;">
-            </div>
-        </section>
+    <div class="controls">
+        <button id="toggleProcessedFeed">Show Processed Feed</button>
+    </div>
+    <div class="video-container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display: none;"></canvas>
+    </div>
+    <p id="detection" class="detection no-detection">Detection: Loading...</p>
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const detectionDisplay = document.getElementById('detection');
+        const toggleProcessedFeed = document.getElementById('toggleProcessedFeed');
 
-        <!-- File Upload Section -->
-        <section>
-            <h2>Upload Image or Video</h2>
-            <form class="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
-                <input type="file" name="file" required>
-                <button type="submit">Upload</button>
-            </form>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2025 Smoke and Fire Detection</p>
-    </footer>
+        let showProcessedFeed = false;
+
+        // Toggle the visibility of the processed feed
+        toggleProcessedFeed.addEventListener('click', () => {
+            showProcessedFeed = !showProcessedFeed;
+            canvas.style.display = showProcessedFeed ? 'block' : 'none';
+            toggleProcessedFeed.textContent = showProcessedFeed ? 'Hide Processed Feed' : 'Show Processed Feed';
+        });
+
+        // Access the browser's camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((error) => console.error('Error accessing webcam:', error));
+
+        // Capture a frame and send it to the server
+        async function sendFrameToServer() {
+            if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+            // Set canvas dimensions to match the video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the current video frame to the canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert the frame to a base64 string
+            const frame = canvas.toDataURL('image/jpeg');
+
+            try {
+                // Send the frame to the server for detection
+                const response = await fetch('/detect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: frame }),
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const { detection, details } = data;
+                    if (detection.includes('Fire')) {
+                        detectionDisplay.textContent = `Detection: ${detection}`;
+                        detectionDisplay.className = 'detection fire';
+                    } else if (detection.includes('Smoke')) {
+                        detectionDisplay.textContent = `Detection: ${detection}`;
+                        detectionDisplay.className = 'detection smoke';
+                    } else {
+                        detectionDisplay.textContent = `Detection: ${detection}`;
+                        detectionDisplay.className = 'detection no-detection';
+                    }
+
+                    if (showProcessedFeed) {
+                        // Clear the canvas
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        // Redraw the video frame
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        // Draw bounding boxes if objects are detected
+                        details.forEach(obj => {
+                            const { xmin, ymin, xmax, ymax, name } = obj;
+
+                            // Draw the bounding box
+                            ctx.strokeStyle = name === 'fire' ? 'red' : 'orange'; // Red for fire, orange for smoke
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(xmin, ymin, xmax - xmin, ymax - ymin);
+
+                            // Add the label
+                            ctx.fillStyle = name === 'fire' ? 'red' : 'orange';
+                            ctx.font = '16px Arial';
+                            ctx.fillText(name, xmin, ymin - 5);
+                        });
+                    }
+                } else {
+                    detectionDisplay.textContent = `Detection: Error - ${data.message}`;
+                    detectionDisplay.className = 'detection';
+                }
+            } catch (error) {
+                console.error('Error sending frame to server:', error);
+                detectionDisplay.textContent = 'Detection: Error';
+                detectionDisplay.className = 'detection';
+            }
+        }
+
+        // Send frames at regular intervals
+        setInterval(sendFrameToServer, 1000);
+    </script>
 </body>
 </html>

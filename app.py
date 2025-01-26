@@ -1,76 +1,61 @@
-from flask import Flask, render_template, Response, request, jsonify
+from flask import Flask, render_template, request, jsonify
 import cv2
 import torch
-import os
+import numpy as np
+import base64
 
-# Initialize Flask app
 app = Flask(__name__)
 
-@app.route('/hello')
-def hello():
-    return "Hello, Render!"
-
 # Load YOLOv5 model
-model_path = 'best.pt'  # Replace with your actual model path
+model_path = 'best.pt'  # Replace with your actual trained model path
 model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
-
-# Initialize webcamflask ru
-cap = cv2.VideoCapture(0)
-
-# Directories
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Generate frames for live video
-def generate_frames():
-    while True:
-        success, frame = cap.read()
-        if not success:
-            break
-
-        results = model(frame)  # YOLOv5 inference
-        results.render()  # Render bounding boxes and labels
-
-        _, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
-
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/detect', methods=['POST'])
+def detect():
+    try:
+        # Get the frame from the request
+        data = request.json['image']
+        _, encoded = data.split(',', 1)  # Split out the base64 data
+        decoded = base64.b64decode(encoded)  # Decode the base64 string
+        nparr = np.frombuffer(decoded, np.uint8)  # Convert to numpy array
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)  # Decode the image
 
-@app.route('/video_feed')
-def video_feed():
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+        # Run YOLO inference
+        results = model(frame)
+        detected_objects = results.pandas().xyxy[0].to_dict('records')  # Extract detections
 
+        # Debugging: Log the detected objects
+        print("Detected objects:", detected_objects)
 
-@app.route('/upload', methods=['POST'])
-def upload():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
+        # Extract detected classes
+        detected_classes = [obj['name'] for obj in detected_objects]
 
-    file = request.files['file']
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)
+        # Determine detection status
+        if "Smoke" in detected_classes and "fire" in detected_classes:
+            detection = "Fire and Smoke Detected!"
+        elif "Smoke" in detected_classes:
+            detection = "Smoke Detected!"
+        elif "fire" in detected_classes:
+            detection = "Fire Detected!"
+        else:
+            detection = "No Fire or Smoke Detected"
 
-    # Run YOLOv5 inference on the uploaded file
-    results = model(file_path)
-    results.save(save_dir=UPLOAD_FOLDER)
+        return jsonify({
+            'status': 'success',
+            'detection': detection,
+            'details': detected_objects
+        })
 
-    # Return the processed file URL
-    processed_file_url = f"/static/processed/{file.filename}"
-    return jsonify({'status': 'success', 'processed_file_url': processed_file_url})
-
-
-@app.route('/status', methods=['GET'])
-def status():
-    return jsonify({'status': 'online'})
-
-
+    except Exception as e:
+        print(f"Error in /detect endpoint: {e}")  # Debugging
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0')
