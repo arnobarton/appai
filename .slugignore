@@ -1,9 +1,11 @@
-*.pyc
 __pycache__/
+*.pyc
+*.pkl
 .git/
 .vscode/
-*.log
-datasets/
 uploads/
-*.pkl
-*.pt
+uploads2/
+uploads3/
+*.log
+*.pt  # Trained models
+datasets/
