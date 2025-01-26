@@ -6,6 +6,10 @@ import os
 # Initialize Flask app
 app = Flask(__name__)
 
+@app.route('/')
+def index():
+    return "Hello, Render!"
+    
 # Load YOLOv5 model
 model_path = 'best.pt'  # Replace with your actual model path
 model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
@@ -67,5 +71,6 @@ def status():
     return jsonify({'status': 'online'})
 
 
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
