@@ -6,8 +6,8 @@ import os
 # Initialize Flask app
 app = Flask(__name__)
 
-@app.route('/')
-def index():
+@app.route('/hello')
+def hello():
     return "Hello, Render!"
     
 # Load YOLOv5 model
