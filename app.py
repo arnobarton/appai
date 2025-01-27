@@ -8,7 +8,9 @@ app = Flask(__name__)
 
 # Load YOLOv5 model
 model_path = 'best.pt'  # Replace with your actual trained model path
-model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
+# Set GitHub authentication token for downloading YOLOv5
+torch.hub.set_auth_token("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")
+model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', force_reload=False)
 
 @app.route('/')
 def index():
