@@ -6,7 +6,8 @@ import numpy as np
 import base64
 import sys
 
-sys.path.insert(0, './yolov5')  # Add the YOLOv5 directory to the Python path
+sys.path.insert(0, os.path.join(os.getcwd(), 'yolov5'))
+
 from models.common import DetectMultiBackend
 
 from models.common import DetectMultiBackend
