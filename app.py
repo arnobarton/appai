@@ -7,9 +7,14 @@ import base64
 
 app = Flask(__name__)
 
-# Load YOLOv5 model
-model_path = 'best.pt' 
-os.environ['GITHUB_TOKEN'] = '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'
+# Load YOLOv5 model# Define the model path
+model_path = os.path.join('models', 'best.pt')  # Adjust path as needed
+
+# Check if the model file exists
+if not os.path.exists(model_path):
+    raise FileNotFoundError(f"Model file not found at {model_path}. Ensure it's in the correct location.")
+
+# Load the YOLOv5 model
 model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
 
 @app.route('/')
