@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import cv2
+import os
 import torch
 import numpy as np
 import base64
@@ -7,8 +8,9 @@ import base64
 app = Flask(__name__)
 
 # Load YOLOv5 model
-model_path = 'best.pt'  # Replace with your actual trained model path
-model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', force_reload=False)
+model_path = 'best.pt' 
+os.environ['GITHUB_TOKEN'] = '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'
+model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
 
 @app.route('/')
 def index():
