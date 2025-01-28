@@ -8,9 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.getcwd(), 'yolov5'))
 
-from models.common import DetectMultiBackend
-
-from models.common import DetectMultiBackend
+from yolov5.models.common import DetectMultiBackend
 
 app = Flask(__name__)
 
