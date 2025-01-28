@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import base64
 import sys
-from ultralytics.yolo.models.common import DetectMultiBackend
+from ultralytics.yolv5.models.common import DetectMultiBackend
 sys.path.insert(0, os.path.join(os.getcwd(), 'yolov5'))
 
 app = Flask(__name__)
