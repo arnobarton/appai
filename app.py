@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import base64
 import sys
-from ultralytics.models.common import DetectMultiBackend
+
 sys.path.insert(0, os.path.join(os.getcwd(), 'yolov5'))
 
 app = Flask(__name__)
@@ -14,7 +14,7 @@ app = Flask(__name__)
 model_path = os.path.join('models', 'best.pt')  # Update path to where your model is located
 if not os.path.exists(model_path):
     raise FileNotFoundError(f"Model file not found at {model_path}")
-model = DetectMultiBackend(model_path)
+
 
 # Load the YOLOv5 model
 model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
